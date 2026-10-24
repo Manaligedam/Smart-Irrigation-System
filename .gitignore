@@ -1,0 +1,14 @@
+# Credentials
+secrets.h
+credentials.h
+config.h
+.env
+
+# Arduino build files
+*.hex
+*.elf
+*.bin
+
+# IDE files
+.vscode/
+.idea/
