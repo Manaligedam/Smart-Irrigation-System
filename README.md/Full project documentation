@@ -1,90 +1,118 @@
 # Smart Irrigation System
 
-An Arduino-based automatic irrigation system designed to monitor soil moisture and control a water pump based on the moisture level of the soil.
+## Overview
 
-## 📌 Project Overview
+The Smart Irrigation System is an IoT-based irrigation project designed to monitor soil moisture and automatically control a water pump according to predefined moisture conditions.
 
-The Smart Irrigation System is an IoT/embedded-system project that helps automate the irrigation process. A soil moisture sensor continuously measures the moisture level in the soil. The Arduino processes the sensor reading and controls a water pump through a relay module.
+The system uses a NodeMCU ESP8266, soil moisture sensor and relay module. Wi-Fi connectivity enables the system to be extended for cloud-based monitoring using Firebase.
 
-The objective is to provide water to the plants when the soil becomes dry and stop irrigation when sufficient moisture is detected.
+## Objectives
 
-## 🎯 Objectives
+* Monitor soil moisture automatically
+* Reduce unnecessary irrigation
+* Automate water-pump operation
+* Use IoT connectivity for remote monitoring
+* Demonstrate sensor interfacing and embedded programming
 
-* Monitor soil moisture continuously.
-* Automate the irrigation process.
-* Reduce unnecessary water usage.
-* Minimize manual intervention.
-* Control the water pump according to soil conditions.
-* Demonstrate the use of sensors, microcontrollers, and relay-based control.
-
-## ⚙️ How It Works
-
-The system follows this basic process:
-
-**Soil Moisture Sensor → Arduino Uno → Relay Module → Water Pump**
-
-1. The soil moisture sensor measures the moisture level.
-2. The sensor sends an analog signal to the Arduino.
-3. Arduino compares the sensor reading with a predefined threshold.
-4. If the soil is relatively dry, Arduino activates the relay.
-5. The relay switches the water pump ON.
-6. When sufficient moisture is detected, Arduino switches the relay OFF and stops the pump.
-
-## 🔧 Hardware Components
-
-* Arduino Uno
-* Soil Moisture Sensor
-* 1-Channel Relay Module
-* DC Water Pump
-* External DC Power Supply
-* Jumper Wires
-* Breadboard (optional)
-
-## 💻 Software & Technologies
-
-* Arduino IDE
-* Embedded C/C++
-* Arduino Uno
-* Analog Sensor Interfacing
-* Relay-Based Control
-* Basic IoT/Automation Concepts
-
-## 🔌 Pin Connections
-
-| Component                | Arduino Connection |
-| ------------------------ | ------------------ |
-| Soil Moisture Sensor VCC | 5V                 |
-| Soil Moisture Sensor GND | GND                |
-| Soil Moisture Sensor AO  | A0                 |
-| Relay VCC                | 5V                 |
-| Relay GND                | GND                |
-| Relay IN                 | D7                 |
-
-## 📊 Control Logic
+## System Architecture
 
 ```text
-              Start
-                ↓
-       Read Soil Moisture
-                ↓
-      Compare With Threshold
-           ↙           ↘
-       Soil Dry     Moisture OK
-          ↓              ↓
-      Pump ON         Pump OFF
-          ↓              ↓
-          └──────┬───────┘
-                 ↓
-          Read Again
+Soil Moisture Sensor
+        │
+        ▼
+   NodeMCU ESP8266
+        │
+   ┌────┴────┐
+   │         │
+   ▼         ▼
+ Relay      Wi-Fi
+   │         │
+   ▼         ▼
+Water Pump  Firebase
 ```
 
-## 🖼️ Circuit Diagram
+## Hardware Components
 
-The circuit diagram shows the connections between the Arduino, soil moisture sensor, relay module, and water pump.
+* NodeMCU ESP8266
+* Soil moisture sensor
+* Relay module
+* DC water pump
+* External power supply
+* Connecting wires
 
-![Smart Irrigation Circuit Diagram](Circuit_Diagram/circuit_diagram.png)
+## Software and Technologies
 
-## 📁 Project Structure
+* Arduino IDE
+* C/C++
+* ESP8266
+* Wi-Fi
+* Firebase
+* GitHub
+
+## Working Principle
+
+1. The soil moisture sensor measures the moisture condition of the soil.
+2. NodeMCU reads the analog sensor value.
+3. The sensor value is converted into an approximate moisture percentage.
+4. If the moisture level falls below the lower threshold, the pump is activated.
+5. When sufficient moisture is reached, the pump is switched off.
+6. Wi-Fi connectivity provides the foundation for sending system information to Firebase.
+
+## Automatic Control Logic
+
+| Soil Moisture | Pump Action             |
+| ------------- | ----------------------- |
+| Below 35%     | Pump ON                 |
+| 35–54%        | Maintain previous state |
+| 55% or above  | Pump OFF                |
+
+Two different thresholds are used to reduce unnecessary rapid switching of the relay.
+
+## Sensor Calibration
+
+The system uses configurable dry and wet sensor reference values:
+
+```cpp
+const int dryValue = 850;
+const int wetValue = 350;
+```
+
+These values should be calibrated according to the actual sensor and environmental conditions.
+
+## Pin Configuration
+
+| Component               | NodeMCU Pin |
+| ----------------------- | ----------- |
+| Soil Moisture Sensor AO | A0          |
+| Relay Signal            | D1          |
+
+## Firebase Data Structure
+
+The project is structured for cloud-based monitoring of parameters such as:
+
+* Raw sensor value
+* Moisture percentage
+* Pump status
+* System status
+
+Example:
+
+```json
+{
+  "sensorValue": 620,
+  "moisturePercentage": 42,
+  "pumpStatus": "OFF",
+  "systemStatus": "Moisture sufficient"
+}
+```
+
+## Circuit Diagram
+
+The circuit diagram is available in:
+
+`Circuit_Diagram/circuit_diagram.png`
+
+## Project Structure
 
 ```text
 Smart-Irrigation-System/
@@ -95,33 +123,58 @@ Smart-Irrigation-System/
 ├── Circuit_Diagram/
 │   └── circuit_diagram.png
 │
-└── README.md
+├── Firebase/
+│   └── firebase_structure.md
+│
+├── Documentation/
+│   └── testing_results.md
+│
+├── README.md
+└── .gitignore
 ```
 
-## 🚀 Future Improvements
+## Testing
 
-The system can be further enhanced by adding:
+The system control logic was tested by monitoring soil moisture conditions and verifying the corresponding pump-control states.
 
-* LCD/OLED display for moisture readings.
-* Mobile application monitoring.
-* IoT/cloud connectivity.
-* Weather-based irrigation control.
-* Multiple soil moisture sensors.
-* Water-level monitoring.
-* Data logging and analytics.
+Testing focuses on:
 
-## ⚠️ Note
+* Sensor reading
+* Moisture percentage calculation
+* Dry-soil detection
+* Pump activation
+* Moisture recovery
+* Pump deactivation
+* Wi-Fi connectivity
 
-The moisture threshold should be calibrated according to the actual sensor, soil type, and growing conditions. The water pump should use an appropriate external power supply rather than being powered directly from an Arduino GPIO pin.
+Actual sensor calibration values may vary depending on the sensor and soil conditions.
 
-## 📚 Learning Outcomes
+## Security
 
-This project provides practical experience in:
+Credentials such as Wi-Fi passwords and Firebase authentication information should not be committed to the public repository.
 
+Placeholder values are used in the source code.
+
+## Future Improvements
+
+* Firebase real-time dashboard
+* Mobile application
+* Multiple soil moisture sensors
+* Water-level monitoring
+* Weather-based irrigation
+* Automatic irrigation scheduling
+* Historical sensor-data analysis
+* Mobile notifications
+
+## Learning Outcomes
+
+This project demonstrates practical experience with:
+
+* ESP8266/NodeMCU
 * Arduino programming
 * Sensor interfacing
-* Analog data acquisition
 * Relay control
-* Embedded-system development
-* Basic automation
-* Hardware-software integration
+* IoT connectivity
+* Firebase data structures
+* GitHub project documentation
+* Basic IoT security practices
