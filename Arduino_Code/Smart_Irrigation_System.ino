@@ -1,57 +1,102 @@
 /*
   Smart Irrigation System
   -----------------------
-  Arduino-based automatic irrigation controller.
+  IoT-based automatic irrigation system using
+  NodeMCU ESP8266 and a soil moisture sensor.
 
   Features:
-  - Reads soil moisture using an analog sensor
-  - Converts sensor reading into moisture percentage
-  - Automatically controls a water pump through a relay
-  - Uses separate ON/OFF thresholds to reduce rapid relay switching
-  - Displays system status through Serial Monitor
+  - Soil moisture monitoring
+  - Moisture percentage calculation
+  - Automatic pump control
+  - Relay-based switching
+  - Wi-Fi connectivity
+  - Firebase integration structure
 
-  Board: Arduino Uno
+  Board: NodeMCU ESP8266
 */
 
-const int soilMoisturePin = A0;
-const int relayPin = 7;
+#include <ESP8266WiFi.h>
 
-// Sensor calibration values.
-// These should be adjusted according to the actual sensor.
+// -------------------------
+// Wi-Fi Configuration
+// -------------------------
+
+const char* WIFI_SSID = "YOUR_WIFI_NAME";
+const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
+
+// -------------------------
+// Pin Configuration
+// -------------------------
+
+const int soilMoisturePin = A0;
+const int relayPin = D1;
+
+// -------------------------
+// Sensor Calibration
+// -------------------------
+
 const int dryValue = 850;
 const int wetValue = 350;
 
-// Pump starts when moisture falls below this value.
-const int pumpOnThreshold = 35;
+// -------------------------
+// Moisture Thresholds
+// -------------------------
 
-// Pump stops when moisture reaches this value.
+const int pumpOnThreshold = 35;
 const int pumpOffThreshold = 55;
 
 bool pumpState = false;
 
+
+// -------------------------
+// Setup
+// -------------------------
+
 void setup() {
 
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   pinMode(soilMoisturePin, INPUT);
   pinMode(relayPin, OUTPUT);
 
-  // Keep pump OFF when the system starts.
+  // Pump OFF at startup.
+  // Active-LOW relay.
   digitalWrite(relayPin, HIGH);
 
-  Serial.println("================================");
-  Serial.println(" Smart Irrigation System");
-  Serial.println("================================");
-  Serial.println("System Started");
   Serial.println();
+  Serial.println("==============================");
+  Serial.println(" Smart Irrigation System");
+  Serial.println("==============================");
+
+  // Connect to Wi-Fi.
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+  Serial.print("Connecting to Wi-Fi");
+
+  while (WiFi.status() != WL_CONNECTED) {
+
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println();
+  Serial.println("Wi-Fi Connected!");
+
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
 }
+
+
+// -------------------------
+// Main Loop
+// -------------------------
 
 void loop() {
 
-  // Read raw sensor value.
+  // Read raw soil moisture value.
   int sensorValue = analogRead(soilMoisturePin);
 
-  // Convert sensor value into moisture percentage.
+  // Convert raw reading into percentage.
   int moisturePercentage = map(
     sensorValue,
     dryValue,
@@ -60,22 +105,18 @@ void loop() {
     100
   );
 
-  // Keep percentage within 0-100 range.
+  // Keep percentage between 0 and 100.
   moisturePercentage = constrain(
     moisturePercentage,
     0,
     100
   );
 
-  Serial.print("Sensor Value: ");
-  Serial.print(sensorValue);
 
-  Serial.print(" | Moisture: ");
-  Serial.print(moisturePercentage);
-  Serial.println("%");
+  // -------------------------
+  // Automatic Pump Control
+  // -------------------------
 
-
-  // Start pump when soil becomes too dry.
   if (!pumpState && moisturePercentage < pumpOnThreshold) {
 
     pumpState = true;
@@ -83,46 +124,54 @@ void loop() {
     // Active-LOW relay
     digitalWrite(relayPin, LOW);
 
-    Serial.println("Status: DRY");
-    Serial.println("Action: Pump ON");
+    Serial.println("Soil is DRY");
+    Serial.println("Pump: ON");
   }
 
-
-  // Stop pump when soil has enough moisture.
   else if (pumpState && moisturePercentage >= pumpOffThreshold) {
 
     pumpState = false;
 
-    // Active-LOW relay
+    // Pump OFF
     digitalWrite(relayPin, HIGH);
 
-    Serial.println("Status: MOIST");
-    Serial.println("Action: Pump OFF");
+    Serial.println("Soil moisture sufficient");
+    Serial.println("Pump: OFF");
   }
 
 
-  // Display normal operating status.
+  // -------------------------
+  // Display System Data
+  // -------------------------
+
+  Serial.println("------------------------------");
+
+  Serial.print("Sensor Value: ");
+  Serial.println(sensorValue);
+
+  Serial.print("Moisture: ");
+  Serial.print(moisturePercentage);
+  Serial.println("%");
+
+  Serial.print("Pump Status: ");
+
+  if (pumpState) {
+    Serial.println("ON");
+  }
   else {
-
-    if (moisturePercentage < pumpOffThreshold) {
-      Serial.println("Status: Moisture being monitored");
-    }
-    else {
-      Serial.println("Status: Moisture sufficient");
-    }
-
-    Serial.print("Pump: ");
-
-    if (pumpState) {
-      Serial.println("ON");
-    }
-    else {
-      Serial.println("OFF");
-    }
+    Serial.println("OFF");
   }
 
-  Serial.println("--------------------------------");
+  Serial.print("Wi-Fi Status: ");
 
-  // Read sensor every 2 seconds.
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("Connected");
+  }
+  else {
+    Serial.println("Disconnected");
+  }
+
+  Serial.println("------------------------------");
+
   delay(2000);
 }
