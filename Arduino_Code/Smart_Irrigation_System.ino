@@ -1,12 +1,14 @@
 /*
   Smart Irrigation System
   -----------------------
-  Arduino-based automatic irrigation system.
+  Arduino-based automatic irrigation controller.
 
-  Working:
-  - Reads soil moisture using an analog sensor.
-  - If the soil is dry, the water pump is switched ON.
-  - If sufficient moisture is detected, the pump is switched OFF.
+  Features:
+  - Reads soil moisture using an analog sensor
+  - Converts sensor reading into moisture percentage
+  - Automatically controls a water pump through a relay
+  - Uses separate ON/OFF thresholds to reduce rapid relay switching
+  - Displays system status through Serial Monitor
 
   Board: Arduino Uno
 */
@@ -14,42 +16,113 @@
 const int soilMoisturePin = A0;
 const int relayPin = 7;
 
-// Adjust this value after calibrating your soil moisture sensor.
-const int moistureThreshold = 600;
+// Sensor calibration values.
+// These should be adjusted according to the actual sensor.
+const int dryValue = 850;
+const int wetValue = 350;
+
+// Pump starts when moisture falls below this value.
+const int pumpOnThreshold = 35;
+
+// Pump stops when moisture reaches this value.
+const int pumpOffThreshold = 55;
+
+bool pumpState = false;
 
 void setup() {
+
   Serial.begin(9600);
 
   pinMode(soilMoisturePin, INPUT);
   pinMode(relayPin, OUTPUT);
 
-  // Pump OFF at startup.
+  // Keep pump OFF when the system starts.
   digitalWrite(relayPin, HIGH);
 
-  Serial.println("Smart Irrigation System Started");
+  Serial.println("================================");
+  Serial.println(" Smart Irrigation System");
+  Serial.println("================================");
+  Serial.println("System Started");
+  Serial.println();
 }
 
 void loop() {
 
-  int moistureValue = analogRead(soilMoisturePin);
+  // Read raw sensor value.
+  int sensorValue = analogRead(soilMoisturePin);
 
-  Serial.print("Soil Moisture Value: ");
-  Serial.println(moistureValue);
+  // Convert sensor value into moisture percentage.
+  int moisturePercentage = map(
+    sensorValue,
+    dryValue,
+    wetValue,
+    0,
+    100
+  );
 
-  if (moistureValue > moistureThreshold) {
+  // Keep percentage within 0-100 range.
+  moisturePercentage = constrain(
+    moisturePercentage,
+    0,
+    100
+  );
 
-    // Soil is relatively dry.
+  Serial.print("Sensor Value: ");
+  Serial.print(sensorValue);
+
+  Serial.print(" | Moisture: ");
+  Serial.print(moisturePercentage);
+  Serial.println("%");
+
+
+  // Start pump when soil becomes too dry.
+  if (!pumpState && moisturePercentage < pumpOnThreshold) {
+
+    pumpState = true;
+
+    // Active-LOW relay
     digitalWrite(relayPin, LOW);
 
-    Serial.println("Soil is dry -> Pump ON");
-
-  } else {
-
-    // Soil has sufficient moisture.
-    digitalWrite(relayPin, HIGH);
-
-    Serial.println("Soil has sufficient moisture -> Pump OFF");
+    Serial.println("Status: DRY");
+    Serial.println("Action: Pump ON");
   }
 
+
+  // Stop pump when soil has enough moisture.
+  else if (pumpState && moisturePercentage >= pumpOffThreshold) {
+
+    pumpState = false;
+
+    // Active-LOW relay
+    digitalWrite(relayPin, HIGH);
+
+    Serial.println("Status: MOIST");
+    Serial.println("Action: Pump OFF");
+  }
+
+
+  // Display normal operating status.
+  else {
+
+    if (moisturePercentage < pumpOffThreshold) {
+      Serial.println("Status: Moisture being monitored");
+    }
+    else {
+      Serial.println("Status: Moisture sufficient");
+    }
+
+    Serial.print("Pump: ");
+
+    if (pumpState) {
+      Serial.println("ON");
+    }
+    else {
+      Serial.println("OFF");
+    }
+  }
+
+  Serial.println("--------------------------------");
+
+  // Read sensor every 2 seconds.
   delay(2000);
 }
